@@ -130,9 +130,43 @@ SentinelRAG/
 
 ## Deployment
 
-For Railway or Streamlit Cloud, set the same environment variables as secrets. Use `LANGSMITH_PROJECT=SentinelRAG-prod` for production traces.
+### Streamlit Community Cloud (Free)
 
----
+1. **Push to GitHub:**
+   ```bash
+   git add .
+   git commit -m "Prepare for deployment"
+   git push origin main
+   ```
+
+2. **Deploy on Streamlit Cloud:**
+   - Go to [share.streamlit.io](https://share.streamlit.io)
+   - Sign in with GitHub
+   - Click **"New app"** → Select your repo
+   - Set main file: `app.py`
+   - Click **"Deploy"**
+
+3. **Configure Secrets:**
+   
+   In Streamlit Cloud dashboard → **Settings** → **Secrets**, add:
+   ```toml
+   OPENAI_API_KEY = "your-api-key"
+   OPENAI_BASE_URL = "https://api.synthetic.new/openai/v1"
+   LLM_MODEL = "hf:zai-org/GLM-4.7"
+   EMBEDDING_MODEL = "hf:nomic-ai/nomic-embed-text-v1.5"
+   NEON_DATABASE_URL = "postgresql://user:pass@host.neon.tech/db?sslmode=require"
+   LANGSMITH_API_KEY = "lsv2_pt_xxxxx"
+   LANGSMITH_PROJECT = "SentinelRAG-prod"
+   APP_PASSWORD = "your-secret-password"
+   ```
+
+4. **Reboot the app** after adding secrets.
+
+> **Note:** Your Neon database persists across deployments. CVE data only needs to be ingested once.
+
+### Password Protection
+
+Set `APP_PASSWORD` in your secrets to require authentication. Leave empty for open access.
 
 ## License
 
