@@ -16,10 +16,10 @@ class Config:
     
     # LLM Configuration
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-    OPENAI_BASE_URL: str = os.getenv("OPENAI_BASE_URL", "https://api.synthetic.new/openai/v1")
-    LLM_MODEL: str = os.getenv("LLM_MODEL", "llama3.2")
-    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "hf:nomic-ai/nomic-embed-text-v1.5")
-    EMBEDDING_DIMENSIONS: int = 768  # nomic-embed-text-v1.5 output size
+    OPENAI_BASE_URL: str = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "gpt-4o-mini")
+    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
+    EMBEDDING_DIMENSIONS: int = int(os.getenv("EMBEDDING_DIMENSIONS", "1536"))  # OpenAI default
     
     # Database
     NEON_DATABASE_URL: str = os.getenv("NEON_DATABASE_URL", "")

@@ -45,9 +45,9 @@ Edit `.env` with your credentials:
 ```env
 # LLM (OpenAI-compatible endpoint)
 OPENAI_API_KEY=your-api-key
-OPENAI_BASE_URL=https://api.synthetic.new/v1
-LLM_MODEL=llama3.2
-EMBEDDING_MODEL=hf:nomic-ai/nomic-embed-text-v1.5
+OPENAI_BASE_URL=https://api.openai.com/v1
+LLM_MODEL=gpt-4o-mini
+EMBEDDING_MODEL=text-embedding-3-small
 
 # Database (from Neon dashboard)
 NEON_DATABASE_URL=postgresql://user:pass@host.neon.tech/db?sslmode=require
@@ -151,9 +151,9 @@ SentinelRAG/
    In Streamlit Cloud dashboard → **Settings** → **Secrets**, add:
    ```toml
    OPENAI_API_KEY = "your-api-key"
-   OPENAI_BASE_URL = "https://api.synthetic.new/openai/v1"
-   LLM_MODEL = "hf:zai-org/GLM-4.7"
-   EMBEDDING_MODEL = "hf:nomic-ai/nomic-embed-text-v1.5"
+   OPENAI_BASE_URL = "https://api.openai.com/v1"
+   LLM_MODEL = "gpt-4o-mini"
+   EMBEDDING_MODEL = "text-embedding-3-small"
    NEON_DATABASE_URL = "postgresql://user:pass@host.neon.tech/db?sslmode=require"
    LANGSMITH_API_KEY = "lsv2_pt_xxxxx"
    LANGSMITH_PROJECT = "SentinelRAG-prod"
