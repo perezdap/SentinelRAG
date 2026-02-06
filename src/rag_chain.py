@@ -143,6 +143,37 @@ def create_retriever(embeddings: SyntheticEmbeddings, k: int = 5):
             
             return all(w in generic_terms for w in meaningful)
         
+        @staticmethod
+        def _extract_query_keywords(query: str) -> list[str]:
+            """Extract meaningful query keywords for lexical fallback search."""
+            tokens = re.findall(r"[a-z0-9][a-z0-9._-]*", query.lower())
+            stopwords = {
+                "a", "an", "the", "of", "for", "to", "in", "on", "and", "or", "with",
+                "me", "show", "list", "give", "what", "whats", "are", "is", "please",
+                "can", "do", "you", "have", "most", "well", "known", "recent", "latest",
+                "newest", "cve", "cves", "vulnerability", "vulnerabilities",
+            }
+            keywords = []
+            for token in tokens:
+                if token in stopwords:
+                    continue
+                if len(token) < 3 and not any(ch.isdigit() for ch in token):
+                    continue
+                if token not in keywords:
+                    keywords.append(token)
+            return keywords[:6]
+        
+        @staticmethod
+        def _rows_match_keywords(rows, keywords: list[str]) -> bool:
+            """Check whether retrieved rows include any keyword match."""
+            if not keywords:
+                return True
+            for row in rows:
+                haystack = f"{row[1] or ''} {row[2] or ''} {row[0] or ''}".lower()
+                if any(keyword in haystack for keyword in keywords):
+                    return True
+            return False
+        
         def _get_relevant_documents(self, query: str) -> List[Document]:
             """Retrieve documents similar to the query."""
             is_recent_query = self._is_recent_query(query)
@@ -213,6 +244,34 @@ def create_retriever(embeddings: SyntheticEmbeddings, k: int = 5):
                         """, (str(query_embedding), str(query_embedding), self.k))
                     
                     rows = cur.fetchall()
+                    
+                    # Fallback lexical retrieval if semantic results miss direct query terms.
+                    if not is_generic_recent_query:
+                        keywords = self._extract_query_keywords(query)
+                        if keywords and not self._rows_match_keywords(rows, keywords):
+                            patterns = [f"%{k}%" for k in keywords]
+                            cur.execute("""
+                                SELECT
+                                    cve_id,
+                                    title,
+                                    description,
+                                    severity,
+                                    cvss_score,
+                                    published_date,
+                                    NULL::float as similarity
+                                FROM vulnerabilities
+                                WHERE
+                                    cve_id ILIKE ANY(%s)
+                                    OR title ILIKE ANY(%s)
+                                    OR description ILIKE ANY(%s)
+                                ORDER BY published_date DESC NULLS LAST
+                                LIMIT %s
+                            """, (patterns, patterns, patterns, self.k))
+                            keyword_rows = cur.fetchall()
+                            if keyword_rows:
+                                rows = keyword_rows
+                            else:
+                                rows = []
             finally:
                 conn.close()
             
@@ -258,9 +317,11 @@ When answering questions:
 2. Always cite CVE IDs when referencing specific vulnerabilities
 3. Include CVSS scores and severity ratings when available
 4. Suggest practical remediation steps when relevant
-5. If information is not in the context, say so clearly
-6. For "recent/latest" requests, determine recency using published_date only
-7. Never infer recency from CVE ID numbering
+5. Use only the provided context; do not use outside knowledge
+6. If information is not in the context, explicitly say it is not found in the database context
+7. Never guess, infer from memory, or add facts not present in context
+8. For "recent/latest" requests, determine recency using published_date only
+9. Never infer recency from CVE ID numbering
 
 Context from vulnerability database:
 {context}
@@ -268,8 +329,10 @@ Context from vulnerability database:
 
 USER_PROMPT = """Question: {question}
 
-Based on the vulnerability data provided, give a comprehensive answer. Include specific 
-CVE IDs, severity levels, and any relevant technical details."""
+Based only on the vulnerability data provided, give a comprehensive answer.
+If the context does not contain direct evidence for the question, reply:
+"I could not find this in the current vulnerability database context."
+Then briefly suggest how the user could refine the query."""
 
 
 def format_docs(docs) -> str:
