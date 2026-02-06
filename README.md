@@ -70,7 +70,7 @@ uv sync
 ### 3. Initialize Database
 
 ```bash
-uv run python src/db_setup.py
+uv run python -m src.db_setup
 ```
 
 You should see:
@@ -85,12 +85,12 @@ You should see:
 
 **Quick test (last 7 days, ~750 CVEs):**
 ```bash
-uv run python src/cve_ingestion.py --recent --days 7
+uv run python -m src.cve_ingestion --recent --days 7
 ```
 
 **Full database (all 330k CVEs, ~30 min with API key):**
 ```bash
-uv run python src/cve_ingestion.py --full
+uv run python -m src.cve_ingestion --full
 ```
 
 ### 5. Run the App
