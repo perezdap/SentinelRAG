@@ -8,7 +8,6 @@ over security vulnerabilities.
 import os
 import openai
 from langchain_openai import ChatOpenAI
-from langchain_community.vectorstores import PGVector
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
@@ -88,24 +87,85 @@ def create_llm() -> ChatOpenAI:
 
 def create_retriever(embeddings: SyntheticEmbeddings, k: int = 5):
     """
-    Create a pgvector retriever for semantic search.
+    Create a custom retriever for our vulnerabilities table.
     
     Args:
         embeddings: Embeddings client for query vectorization
         k: Number of documents to retrieve
     """
-    connection_string = config.NEON_DATABASE_URL
+    import psycopg2
+    from langchain_core.documents import Document
+    from langchain_core.retrievers import BaseRetriever
+    from typing import List
+    from pydantic import PrivateAttr
     
-    vectorstore = PGVector(
-        connection_string=connection_string,
-        embedding_function=embeddings,
-        collection_name="vulnerabilities",
-        distance_strategy="cosine",
-    )
+    class VulnerabilityRetriever(BaseRetriever):
+        """Custom retriever that queries the vulnerabilities table directly."""
+        
+        k: int = 5
+        _embeddings: SyntheticEmbeddings = PrivateAttr()
+        _connection_string: str = PrivateAttr()
+        
+        def __init__(self, embeddings: SyntheticEmbeddings, connection_string: str, k: int = 5):
+            super().__init__(k=k)
+            self._embeddings = embeddings
+            self._connection_string = connection_string
+        
+        def _get_relevant_documents(self, query: str) -> List[Document]:
+            """Retrieve documents similar to the query."""
+            # Generate query embedding
+            query_embedding = self._embeddings.embed_query(query)
+            
+            # Query the database using pgvector cosine similarity
+            conn = psycopg2.connect(self._connection_string)
+            try:
+                with conn.cursor() as cur:
+                    # Use pgvector's <=> operator for cosine distance
+                    cur.execute("""
+                        SELECT 
+                            cve_id, 
+                            title, 
+                            description, 
+                            severity, 
+                            cvss_score,
+                            published_date,
+                            1 - (embedding <=> %s::vector) as similarity
+                        FROM vulnerabilities
+                        WHERE embedding IS NOT NULL
+                        ORDER BY embedding <=> %s::vector
+                        LIMIT %s
+                    """, (str(query_embedding), str(query_embedding), self.k))
+                    
+                    rows = cur.fetchall()
+            finally:
+                conn.close()
+            
+            # Convert to LangChain Documents
+            documents = []
+            for row in rows:
+                cve_id, title, description, severity, cvss_score, published_date, similarity = row
+                
+                # Build document content
+                content = f"{title}\n\n{description or 'No description available.'}"
+                
+                # Build metadata
+                metadata = {
+                    "cve_id": cve_id,
+                    "title": title,
+                    "severity": severity,
+                    "cvss_score": float(cvss_score) if cvss_score else None,
+                    "published_date": str(published_date) if published_date else None,
+                    "similarity": float(similarity) if similarity else None,
+                }
+                
+                documents.append(Document(page_content=content, metadata=metadata))
+            
+            return documents
     
-    return vectorstore.as_retriever(
-        search_type="similarity",
-        search_kwargs={"k": k}
+    return VulnerabilityRetriever(
+        embeddings=embeddings,
+        connection_string=config.NEON_DATABASE_URL,
+        k=k
     )
 
 

@@ -20,20 +20,65 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+
+# ============================================================================
+# Password Protection
+# ============================================================================
+
+def check_password() -> bool:
+    """Simple password gate to prevent casual access."""
+    
+    # Get password from environment
+    correct_password = config.APP_PASSWORD
+    
+    if not correct_password:
+        # No password set - allow access (for local dev)
+        return True
+    
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
+    
+    if st.session_state.authenticated:
+        return True
+    
+    # Show login form
+    st.markdown("### 🔐 Authentication Required")
+    st.markdown("Please enter the password to access SentinelRAG.")
+    
+    password = st.text_input("Password", type="password", key="password_input")
+    
+    if st.button("Login", type="primary"):
+        if password == correct_password:
+            st.session_state.authenticated = True
+            st.rerun()
+        else:
+            st.error("❌ Incorrect password")
+    
+    return False
+
+
+# Check password before showing anything else
+if not check_password():
+    st.stop()
+
 # Custom CSS for better styling
 st.markdown("""
 <style>
+    /* Main header styling - works in light and dark mode */
     .main-header {
         font-size: 2.5rem;
         font-weight: 700;
-        color: #1a1a2e;
+        color: inherit;
         margin-bottom: 0.5rem;
     }
     .sub-header {
         font-size: 1.1rem;
-        color: #4a4a6a;
+        color: inherit;
+        opacity: 0.8;
         margin-bottom: 2rem;
     }
+    
+    /* Source card styling */
     .source-card {
         background-color: #f8f9fa;
         border-left: 4px solid #0066cc;
@@ -41,18 +86,63 @@ st.markdown("""
         margin: 0.5rem 0;
         border-radius: 0 8px 8px 0;
     }
+    
+    /* Severity color coding */
     .severity-critical { color: #dc3545; font-weight: bold; }
     .severity-high { color: #fd7e14; font-weight: bold; }
     .severity-medium { color: #ffc107; font-weight: bold; }
     .severity-low { color: #28a745; font-weight: bold; }
+    
+    /* CVE ID badge */
     .cve-id { 
         font-family: monospace; 
         background-color: #e9ecef;
         padding: 2px 6px;
         border-radius: 4px;
     }
+    
+    /* Fix button styling - better contrast */
+    .stButton > button {
+        font-weight: 600;
+    }
+    
+    /* Primary button - darker blue with white text */
+    .stButton > button[kind="primary"] {
+        background-color: #0066cc !important;
+        color: white !important;
+        border: none !important;
+    }
+    .stButton > button[kind="primary"]:hover {
+        background-color: #0052a3 !important;
+        color: white !important;
+    }
+    
+    /* Secondary buttons */
+    .stButton > button[kind="secondary"] {
+        background-color: #f0f2f6 !important;
+        color: #1a1a2e !important;
+        border: 1px solid #d0d3d9 !important;
+    }
+    .stButton > button[kind="secondary"]:hover {
+        background-color: #e0e2e6 !important;
+        border-color: #b0b3b9 !important;
+    }
+    
+    /* Sidebar buttons (example queries) */
+    div[data-testid="stSidebar"] .stButton > button {
+        background-color: #f8f9fa !important;
+        color: #1a1a2e !important;
+        border: 1px solid #dee2e6 !important;
+        font-size: 0.85rem !important;
+        text-align: left !important;
+    }
+    div[data-testid="stSidebar"] .stButton > button:hover {
+        background-color: #e9ecef !important;
+        border-color: #0066cc !important;
+    }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 # ============================================================================

@@ -32,6 +32,9 @@ class Config:
     NVD_API_KEY: str = os.getenv("NVD_API_KEY", "")
     NVD_BASE_URL: str = "https://services.nvd.nist.gov/rest/json/cves/2.0"
     
+    # App Security
+    APP_PASSWORD: str = os.getenv("APP_PASSWORD", "")
+    
     # Rate limiting (requests per 30 seconds)
     NVD_RATE_LIMIT: int = 50 if os.getenv("NVD_API_KEY") else 5
     
