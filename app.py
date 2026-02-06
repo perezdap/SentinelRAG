@@ -165,20 +165,7 @@ with st.sidebar:
     )
     
     st.markdown("---")
-    
-    st.subheader("📊 Status")
-    
-    # Check configuration
-    missing = config.validate()
-    if missing:
-        st.error(f"⚠️ Missing config: {', '.join(missing)}")
-    else:
-        st.success("✅ Configuration valid")
-        st.caption(f"Model: `{config.LLM_MODEL}`")
-        st.caption(f"Embeddings: `{config.EMBEDDING_MODEL}`")
-    
-    st.markdown("---")
-    
+
     st.subheader("📚 Example Queries")
     example_queries = [
         "What are the most critical vulnerabilities in Apache Log4j?",
