@@ -6,6 +6,7 @@ over security vulnerabilities.
 """
 
 import os
+import re
 import openai
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -111,30 +112,105 @@ def create_retriever(embeddings: SyntheticEmbeddings, k: int = 5):
             self._embeddings = embeddings
             self._connection_string = connection_string
         
+        @staticmethod
+        def _is_recent_query(query: str) -> bool:
+            """Detect whether user asked for recency-based results."""
+            return bool(re.search(r"\b(recent|latest|newest|most recent|newly published)\b", query.lower()))
+        
+        @staticmethod
+        def _is_generic_recent_query(query: str) -> bool:
+            """
+            Detect broad recency requests (e.g., "list most recent CVEs")
+            where date ordering should be global, not semantic.
+            """
+            words = re.findall(r"[a-z0-9]+", query.lower())
+            if not words:
+                return False
+            
+            stopwords = {
+                "do", "you", "have", "a", "an", "the", "of", "for", "to", "in", "on",
+                "and", "or", "with", "me", "show", "list", "give", "what", "are", "is",
+                "please", "can",
+            }
+            generic_terms = {
+                "cve", "cves", "vulnerability", "vulnerabilities",
+                "recent", "latest", "newest", "most", "new", "published",
+            }
+            
+            meaningful = [w for w in words if w not in stopwords]
+            if not meaningful:
+                return False
+            
+            return all(w in generic_terms for w in meaningful)
+        
         def _get_relevant_documents(self, query: str) -> List[Document]:
             """Retrieve documents similar to the query."""
-            # Generate query embedding
-            query_embedding = self._embeddings.embed_query(query)
+            is_recent_query = self._is_recent_query(query)
+            is_generic_recent_query = self._is_generic_recent_query(query)
+            query_embedding = None if is_generic_recent_query else self._embeddings.embed_query(query)
             
-            # Query the database using pgvector cosine similarity
             conn = psycopg2.connect(self._connection_string)
             try:
                 with conn.cursor() as cur:
-                    # Use pgvector's <=> operator for cosine distance
-                    cur.execute("""
-                        SELECT 
-                            cve_id, 
-                            title, 
-                            description, 
-                            severity, 
-                            cvss_score,
-                            published_date,
-                            1 - (embedding <=> %s::vector) as similarity
-                        FROM vulnerabilities
-                        WHERE embedding IS NOT NULL
-                        ORDER BY embedding <=> %s::vector
-                        LIMIT %s
-                    """, (str(query_embedding), str(query_embedding), self.k))
+                    if is_generic_recent_query:
+                        cur.execute("""
+                            SELECT
+                                cve_id,
+                                title,
+                                description,
+                                severity,
+                                cvss_score,
+                                published_date,
+                                NULL::float as similarity
+                            FROM vulnerabilities
+                            WHERE cve_id IS NOT NULL
+                            ORDER BY published_date DESC NULLS LAST
+                            LIMIT %s
+                        """, (self.k,))
+                    elif is_recent_query:
+                        candidate_pool = max(self.k * 40, 200)
+                        cur.execute("""
+                            WITH semantic_candidates AS (
+                                SELECT
+                                    cve_id,
+                                    title,
+                                    description,
+                                    severity,
+                                    cvss_score,
+                                    published_date,
+                                    1 - (embedding <=> %s::vector) AS similarity
+                                FROM vulnerabilities
+                                WHERE embedding IS NOT NULL
+                                ORDER BY embedding <=> %s::vector
+                                LIMIT %s
+                            )
+                            SELECT
+                                cve_id,
+                                title,
+                                description,
+                                severity,
+                                cvss_score,
+                                published_date,
+                                similarity
+                            FROM semantic_candidates
+                            ORDER BY published_date DESC NULLS LAST, similarity DESC
+                            LIMIT %s
+                        """, (str(query_embedding), str(query_embedding), candidate_pool, self.k))
+                    else:
+                        cur.execute("""
+                            SELECT
+                                cve_id,
+                                title,
+                                description,
+                                severity,
+                                cvss_score,
+                                published_date,
+                                1 - (embedding <=> %s::vector) as similarity
+                            FROM vulnerabilities
+                            WHERE embedding IS NOT NULL
+                            ORDER BY embedding <=> %s::vector
+                            LIMIT %s
+                        """, (str(query_embedding), str(query_embedding), self.k))
                     
                     rows = cur.fetchall()
             finally:
@@ -183,6 +259,8 @@ When answering questions:
 3. Include CVSS scores and severity ratings when available
 4. Suggest practical remediation steps when relevant
 5. If information is not in the context, say so clearly
+6. For "recent/latest" requests, determine recency using published_date only
+7. Never infer recency from CVE ID numbering
 
 Context from vulnerability database:
 {context}
@@ -210,6 +288,8 @@ def format_docs(docs) -> str:
             entry += f"\nSeverity: {metadata['severity']}"
         if metadata.get("cvss_score"):
             entry += f" (CVSS: {metadata['cvss_score']})"
+        if metadata.get("published_date"):
+            entry += f"\nPublished: {metadata['published_date']}"
             
         formatted.append(entry)
     
