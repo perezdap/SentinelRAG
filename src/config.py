@@ -15,11 +15,10 @@ class Config:
     """Application configuration loaded from environment variables."""
     
     # LLM Configuration
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-    OPENAI_BASE_URL: str = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
-    LLM_MODEL: str = os.getenv("LLM_MODEL", "gpt-4o-mini")
-    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
-    EMBEDDING_DIMENSIONS: int = int(os.getenv("EMBEDDING_DIMENSIONS", "1536"))  # OpenAI default
+    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini-1.5-flash")
+    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "models/text-embedding-004")
+    EMBEDDING_DIMENSIONS: int = int(os.getenv("EMBEDDING_DIMENSIONS", "768"))  # Google default
     
     # Database
     NEON_DATABASE_URL: str = os.getenv("NEON_DATABASE_URL", "")
@@ -42,8 +41,8 @@ class Config:
     def validate(cls) -> list[str]:
         """Validate required configuration. Returns list of missing variables."""
         missing = []
-        if not cls.OPENAI_API_KEY:
-            missing.append("OPENAI_API_KEY")
+        if not cls.GOOGLE_API_KEY:
+            missing.append("GOOGLE_API_KEY")
         if not cls.NEON_DATABASE_URL:
             missing.append("NEON_DATABASE_URL")
         return missing

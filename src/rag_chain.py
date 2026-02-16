@@ -7,8 +7,7 @@ over security vulnerabilities.
 
 import os
 import re
-import openai
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
@@ -24,35 +23,30 @@ os.environ["LANGCHAIN_PROJECT"] = config.LANGSMITH_PROJECT
 
 
 # ============================================================================
-# Custom Embeddings for Synthetic.new Compatibility
+# Custom Embeddings Wrapper
 # ============================================================================
 
-class SyntheticEmbeddings(Embeddings):
-    """Custom embeddings wrapper using raw OpenAI client for synthetic.new."""
+class GeminiEmbeddingsWrapper(Embeddings):
+    """Wrapper for Google Gemini embeddings with text truncation."""
     
     def __init__(self):
-        self.client = openai.OpenAI(
-            api_key=config.OPENAI_API_KEY,
-            base_url=config.OPENAI_BASE_URL,
+        self.embeddings = GoogleGenerativeAIEmbeddings(
+            model=config.EMBEDDING_MODEL,
+            google_api_key=config.GOOGLE_API_KEY,
         )
-        self.model = config.EMBEDDING_MODEL
     
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """Embed a list of documents."""
-        embeddings = []
+        results = []
         for text in texts:
             if not text:
-                embeddings.append([0.0] * config.EMBEDDING_DIMENSIONS)
+                results.append([0.0] * config.EMBEDDING_DIMENSIONS)
             else:
                 # Truncate long texts
                 if len(text) > 8000:
                     text = text[:8000]
-                response = self.client.embeddings.create(
-                    model=self.model,
-                    input=text
-                )
-                embeddings.append(response.data[0].embedding)
-        return embeddings
+                results.append(self.embeddings.embed_query(text))
+        return results
     
     def embed_query(self, text: str) -> list[float]:
         """Embed a single query."""
@@ -60,33 +54,28 @@ class SyntheticEmbeddings(Embeddings):
             return [0.0] * config.EMBEDDING_DIMENSIONS
         if len(text) > 8000:
             text = text[:8000]
-        response = self.client.embeddings.create(
-            model=self.model,
-            input=text
-        )
-        return response.data[0].embedding
+        return self.embeddings.embed_query(text)
 
 
 # ============================================================================
 # Component Factories
 # ============================================================================
 
-def create_embeddings() -> SyntheticEmbeddings:
+def create_embeddings() -> GeminiEmbeddingsWrapper:
     """Create embeddings client for vector similarity search."""
-    return SyntheticEmbeddings()
+    return GeminiEmbeddingsWrapper()
 
 
-def create_llm() -> ChatOpenAI:
+def create_llm() -> ChatGoogleGenerativeAI:
     """Create LLM client for response generation."""
-    return ChatOpenAI(
+    return ChatGoogleGenerativeAI(
         model=config.LLM_MODEL,
-        openai_api_key=config.OPENAI_API_KEY,
-        openai_api_base=config.OPENAI_BASE_URL,
-        temperature=0.1,  # Low temperature for factual responses
+        google_api_key=config.GOOGLE_API_KEY,
+        temperature=0.1,
     )
 
 
-def create_retriever(embeddings: SyntheticEmbeddings, k: int = 5):
+def create_retriever(embeddings: Embeddings, k: int = 5):
     """
     Create a custom retriever for our vulnerabilities table.
     
@@ -104,10 +93,10 @@ def create_retriever(embeddings: SyntheticEmbeddings, k: int = 5):
         """Custom retriever that queries the vulnerabilities table directly."""
         
         k: int = 5
-        _embeddings: SyntheticEmbeddings = PrivateAttr()
+        _embeddings: Embeddings = PrivateAttr()
         _connection_string: str = PrivateAttr()
         
-        def __init__(self, embeddings: SyntheticEmbeddings, connection_string: str, k: int = 5):
+        def __init__(self, embeddings: Embeddings, connection_string: str, k: int = 5):
             super().__init__(k=k)
             self._embeddings = embeddings
             self._connection_string = connection_string
