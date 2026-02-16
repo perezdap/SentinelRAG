@@ -175,9 +175,11 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 def create_embeddings_client() -> GoogleGenerativeAIEmbeddings:
     """Create a Google Gemini embeddings client."""
+    # Set dimensionality to match the database schema (e.g., 768) and prevent errors.
     return GoogleGenerativeAIEmbeddings(
         model=config.EMBEDDING_MODEL,
         google_api_key=config.GOOGLE_API_KEY,
+        output_dimensionality=config.EMBEDDING_DIMENSIONS
     )
 
 

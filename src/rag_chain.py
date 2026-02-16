@@ -31,9 +31,10 @@ class GeminiEmbeddingsWrapper(Embeddings):
     
     def __init__(self):
         self.embeddings = GoogleGenerativeAIEmbeddings(
-            model=config.EMBEDDING_MODEL,
-            google_api_key=config.GOOGLE_API_KEY,
-        )
+                model=config.EMBEDDING_MODEL,
+                google_api_key=config.GOOGLE_API_KEY,
+                output_dimensionality=config.EMBEDDING_DIMENSIONS
+            )
     
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """Embed a list of documents."""
