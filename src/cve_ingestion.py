@@ -170,18 +170,20 @@ def parse_cve(cve: dict) -> dict:
 # Embedding Generation
 # ============================================================================
 
-import openai
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 
-def create_embeddings_client() -> openai.OpenAI:
-    """Create an OpenAI-compatible embeddings client."""
-    return openai.OpenAI(
-        api_key=config.OPENAI_API_KEY,
-        base_url=config.OPENAI_BASE_URL,
+def create_embeddings_client() -> GoogleGenerativeAIEmbeddings:
+    """Create a Google Gemini embeddings client."""
+    # Set dimensionality to match the database schema (e.g., 768) and prevent errors.
+    return GoogleGenerativeAIEmbeddings(
+        model=config.EMBEDDING_MODEL,
+        google_api_key=config.GOOGLE_API_KEY,
+        output_dimensionality=config.EMBEDDING_DIMENSIONS
     )
 
 
-def generate_embedding(client: openai.OpenAI, text: str) -> list[float]:
+def generate_embedding(client: GoogleGenerativeAIEmbeddings, text: str) -> list[float]:
     """Generate embedding for a single text."""
     if not text:
         return [0.0] * config.EMBEDDING_DIMENSIONS
@@ -191,11 +193,7 @@ def generate_embedding(client: openai.OpenAI, text: str) -> list[float]:
     if len(text) > max_chars:
         text = text[:max_chars]
     
-    response = client.embeddings.create(
-        model=config.EMBEDDING_MODEL,
-        input=text
-    )
-    return response.data[0].embedding
+    return client.embed_query(text)
 
 
 # ============================================================================

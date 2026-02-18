@@ -14,6 +14,9 @@ from dotenv import load_dotenv
 import psycopg2
 from psycopg2 import sql
 
+from src.config import config
+
+
 # Load environment variables
 load_dotenv()
 
@@ -47,7 +50,7 @@ def setup_database(conn):
         
         # Create vulnerabilities table with vector column
         print("📊 Creating vulnerabilities table...")
-        cursor.execute("""
+        cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS vulnerabilities (
                 id SERIAL PRIMARY KEY,
                 cve_id VARCHAR(20) UNIQUE,
@@ -59,7 +62,7 @@ def setup_database(conn):
                 modified_date TIMESTAMP,
                 affected_products TEXT[],
                 "references" TEXT[],
-                embedding vector(768),
+                embedding vector({config.EMBEDDING_DIMENSIONS}),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)

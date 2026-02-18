@@ -15,7 +15,7 @@ flowchart LR
     
     subgraph Orchestration
         B[LangChain]
-        C[Ollama / OpenAI-Compatible]
+        C[Google Gemini]
     end
     
     subgraph Storage
@@ -39,9 +39,9 @@ flowchart LR
 |-----------|------------|---------|
 | Frontend | Streamlit | Interactive web UI |
 | Orchestration | LangChain | RAG pipeline management |
-| LLM | Ollama / OpenAI-compatible | Response generation (configurable) |
+| LLM | Google Gemini | Response generation (configurable) |
 | Vector DB | Neon Postgres + pgvector | Embedding storage & similarity search |
-| Embeddings | Ollama / OpenAI-compatible | Text vectorization (configurable) |
+| Embeddings | Google Gemini | Text vectorization (configurable) |
 | Observability | LangSmith | Tracing, debugging, evaluation |
 
 ## Security Rules
@@ -59,19 +59,19 @@ flowchart LR
 ```python
 # ✅ CORRECT
 import os
-api_key = os.getenv("OPENAI_API_KEY")
+api_key = os.getenv("GOOGLE_API_KEY")
 
 # ❌ WRONG
-api_key = "sk-..."  # Never do this
+api_key = "AIza..."  # Never do this
 ```
 
 ### 3. Required Environment Variables
 | Variable | Description |
 |----------|-------------|
-| `OPENAI_API_KEY` | API key (use 'ollama' for local Ollama) |
-| `OPENAI_BASE_URL` | Endpoint URL (e.g., `http://localhost:11434/v1` for Ollama) |
-| `LLM_MODEL` | Model name (e.g., `llama3.2`, `gpt-4o-mini`) |
-| `EMBEDDING_MODEL` | Embedding model (e.g., `nomic-embed-text`) |
+| `GOOGLE_API_KEY` | API key for Google Gemini |
+| `LLM_MODEL` | Model name (e.g., `gemini-1.5-flash`) |
+| `EMBEDDING_MODEL` | Embedding model (e.g., `models/text-embedding-004`) |
+| `EMBEDDING_DIMENSIONS` | Embedding dimensions (e.g., `768`) |
 | `NEON_DATABASE_URL` | Postgres connection string from Neon |
 | `LANGSMITH_API_KEY` | LangSmith API key for tracing |
 | `LANGSMITH_PROJECT` | LangSmith project name |

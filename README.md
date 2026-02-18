@@ -7,7 +7,7 @@ A production-ready security intelligence engine. Query CVE vulnerabilities using
 - **Semantic Search**: Query 330,000+ CVEs using natural language
 - **Real-time Ingestion**: Automated CVE fetching from NVD API
 - **LangSmith Tracing**: Full observability for debugging and evaluation
-- **Flexible LLM**: Works with Ollama, OpenAI, or any compatible endpoint
+- **Flexible LLM**: Powered by Google Gemini
 
 ## Tech Stack
 
@@ -16,7 +16,7 @@ A production-ready security intelligence engine. Query CVE vulnerabilities using
 | Frontend | Streamlit |
 | Orchestration | LangChain |
 | Database | Neon Postgres + pgvector |
-| Embeddings | nomic-embed-text-v1.5 |
+| Embeddings | Google Gemini (text-embedding-004) |
 | Observability | LangSmith |
 
 ---
@@ -43,11 +43,11 @@ cp .env.example .env
 Edit `.env` with your credentials:
 
 ```env
-# LLM (OpenAI-compatible endpoint)
-OPENAI_API_KEY=your-api-key
-OPENAI_BASE_URL=https://api.openai.com/v1
-LLM_MODEL=gpt-4o-mini
-EMBEDDING_MODEL=text-embedding-3-small
+# LLM (Google Gemini)
+GOOGLE_API_KEY=your-api-key
+LLM_MODEL=gemini-1.5-flash
+EMBEDDING_MODEL=models/text-embedding-004
+EMBEDDING_DIMENSIONS=768
 
 # Database (from Neon dashboard)
 NEON_DATABASE_URL=postgresql://user:pass@host.neon.tech/db?sslmode=require
@@ -150,10 +150,10 @@ SentinelRAG/
    
    In Streamlit Cloud dashboard → **Settings** → **Secrets**, add:
    ```toml
-   OPENAI_API_KEY = "your-api-key"
-   OPENAI_BASE_URL = "https://api.openai.com/v1"
-   LLM_MODEL = "gpt-4o-mini"
-   EMBEDDING_MODEL = "text-embedding-3-small"
+   GOOGLE_API_KEY = "your-api-key"
+   LLM_MODEL = "gemini-1.5-flash"
+   EMBEDDING_MODEL = "models/text-embedding-004"
+   EMBEDDING_DIMENSIONS = 768
    NEON_DATABASE_URL = "postgresql://user:pass@host.neon.tech/db?sslmode=require"
    LANGSMITH_API_KEY = "lsv2_pt_xxxxx"
    LANGSMITH_PROJECT = "SentinelRAG-prod"
