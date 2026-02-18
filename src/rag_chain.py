@@ -408,10 +408,13 @@ def create_rag_chain_with_sources(k: int = 5):
         # Format context and generate answer
         context = format_docs(docs)
         messages = prompt.format_messages(context=context, question=question)
-        response = llm.invoke(messages)
+        
+        # Invoke LLM and parse to string to handle multi-part content
+        parser = StrOutputParser()
+        answer = (llm | parser).invoke(messages)
         
         return {
-            "answer": response.content,
+            "answer": answer,
             "sources": docs,
         }
     
